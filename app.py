@@ -46,12 +46,20 @@ def getDocxText(filename):
     #return text
     return docx2txt.process(filename)
 
-#getPDFtext('example.pdf')
-print(getDocxText('example.docx'))
-
-question = ["What is the title of the paper and who are the authors?", "What is the independent variable for this experiment?", "What is the dependent variable?", 
-"What are top 5 most significant results?", "Why is this experiment novel?", "What model was used?",
-"Explain the model architecture briefly."]
+def getDocxText(filename):
+    #doc = docx.Document(filename)
+    #text = []
+    #print(len(doc.parapraphs))
+    #print(doc.paragraphs.text)
+    #for paragraph in doc.paragraphs:
+    #    text.append(paragraph.text)
+    #return text
+    text = docx2txt.process(filename)
+    chunks = []
+    for i in range(0, len(text), 2000):
+        chunk = text[i:i + 2000]
+        chunks.append(chunk)
+    return chunks
 
 def author_title(text, question):
     answers = openai.Completion.create(
@@ -63,7 +71,7 @@ def author_title(text, question):
         frequency_penalty=0,
         presence_penalty=0,
     )
-    return author_title
+    return answers
 
 
                         
@@ -71,7 +79,7 @@ def author_title(text, question):
 def summary(text, question):
     answers = openai.Completion.create(
         engine="text-davinci-002",
-        prompt=f"Answer the following questions based on these texts:\n\n{text}\n\n Questions: {question} \n ",
+        prompt=f"Answer the following questions based on these texts:\n\n{text[1:50]}\n\n Questions: {question[1:]} \n ",
         temperature=0.5,
         max_tokens=100,
         top_p=1,
@@ -83,21 +91,43 @@ def summary(text, question):
     answer_text.write(answers)
 
 #find articles that this source references
-def metaphor(text, question):
-    sources = metaphor.search(
-    "What are 3 sources that would help me understand the background of the article with the following author and title" + author_title(text[0], question[0]),
+def metaphor_check():
+    #sources = metaphor.search(
+    #"What are 3 sources that would help me understand the background of the article with the following author and title: Spoofing and countermeasures for speaker verification: a survey by Zhizheng Wua,1,∗, Nicholas Evansb, Tomi Kinnunenc, Junichi Yamagishid,e, Federico Alegreb, Haizhou Lia,fa",
+    #num_results=3,
+    #use_autoprompt=True,
+    #type="keyword",
+    #)
+
+    search_response = metaphor.search("What are 3 sources that would help me understand the background of the article with the following author and title: Spoofing and countermeasures for speaker verification: a survey by Zhizheng Wua,1,∗, Nicholas Evansb, Tomi Kinnunenc, Junichi Yamagishid,e, Federico Alegreb, Haizhou Lia,fa",
+                                      num_results = 3)
+    contents_response = search_response.get_contents()
+
+    # Print content for each result
+    for content in contents_response.contents:
+        print(f"Title: {content.title}\nURL: {content.url}\n")
+
+    #find articles that reference this source
+    references = metaphor.search(
+    "What are 3 articles similiar to the article with the following author and title: Spoofing and countermeasures for speaker verification: a survey by Zhizheng Wua,1,∗, Nicholas Evansb, Tomi Kinnunenc, Junichi Yamagishid,e, Federico Alegreb, Haizhou Lia,f",
     num_results=3,
     use_autoprompt=True,
     type="keyword",
     )
 
-    #find articles that reference this source
-    references = metaphor.search(
-    "What are 3 articles similiar to the article with the following author and title" + author_title(text[0], question[0]),
-    num_results=3,
-    use_autoprompt=True,
-    type="keyword",
-    )
+    contents_response = references.get_contents()
+
+    # Print content for each result
+    for content in contents_response.contents:
+        print(f"Title: {content.title}\nURL: {content.url}\n")
+
+
+question = ["What is the title of the paper and who are the authors?", "What is the independent variable for this experiment?", "What is the dependent variable?", 
+"What are top 5 most significant results?", "Why is this experiment novel?", "What model was used?",
+"Explain the model architecture briefly."]
+
+chunks = (getDocxText('example.docx'))
+metaphor_check()
 
 
 
